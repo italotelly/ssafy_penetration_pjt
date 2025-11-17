@@ -1,19 +1,19 @@
-## 🗓️ X_Week MINUTE / 25.00.00
+# 🗓️ X_Week MINUTE / 25.00.00
 
-### ✅ 1. Done
+## ✅ 1. Done
 한 주 동안 본인이 완료한 과업을 작성합니다.
 
-### 🧪 2. Evidence
+## 🧪 2. Evidence
 본인이 완료한 과업에 대한 간단한 동작 사진을 작성합니다.
 
-### ⚠️ 3. Issues / Improvements
+## ⚠️ 3. Issues / Improvements
 한 주 동안의 과업을 진행하면서 해결하지 못한 문제점이나 떠오른 개선 사항을 작성합니다.
 
-### 🧩 4. Decisions
+## 🧩 4. Decisions
 회의를 통해 결정된 사안을 작성합니다.
 
-### 📊 5. Progress
+## 📊 5. Progress
 진행률을 세부적으로 작성합니다.
 
-### 🎯 6. Next Goals
+## 🎯 6. Next Goals
 다음 주 동안 본인이 완료할 과업을 작성합니다.
