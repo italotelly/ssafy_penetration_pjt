@@ -5,7 +5,7 @@
 
 류광철 - STM32 LED, EMERGENCY, UART 구현
 
-## 🧪 2. Evidence
+## 🗒️ 2. Evidence
 생략
 
 ## ⚠️ 3. Issues / Improvements
@@ -15,7 +15,7 @@
 
 ![image](./IMAGES/image.png)
 
-## 🧩 4. Decisions
+## 💪 4. Decisions
 ### Turtlebot 역할
 다른 색의 박스는 분류 작업을 실시하지 않고, TurtleBot에 실어 다른 공정으로 자율주행하여 이동시킨다.
 
