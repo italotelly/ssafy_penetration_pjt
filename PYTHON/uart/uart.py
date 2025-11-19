@@ -14,8 +14,8 @@ class uart:
             
         if raw_datas:
             try:
-                datas = list(enumerate(raw_datas))
-                return datas
+                #datas = list(enumerate(raw_datas))
+                return raw_datas
             
             except Exception as e:
                 print("[Failed to receive data from STM32]")
