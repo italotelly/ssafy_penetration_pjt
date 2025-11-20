@@ -18,7 +18,7 @@ class dobot:
         time.sleep(1)
 
     def move(self, pos_x, pos_y, pos_z, pos_r):
-        self.device.set_ptpcmd(self.port, ptp_mode=4, x=pos_x, y=pos_y, z=pos_z, r=pos_r)
+        self.device.set_ptpcmd(self.port, ptp_mode=2, x=pos_x, y=pos_y, z=pos_z, r=pos_r)
         time.sleep(1)
     
     def suction(self, state):
