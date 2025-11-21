@@ -4,24 +4,24 @@ from vision.vision import RealSenseColorDetector
 from modbus.client import ModbusTCPClient
 import threading
 import time
-
+    
 #################### STATE 정의 ####################
-STATE_MAP = {
-    0: "WAIT_START",
-    1: "DETECT_OBJECT",
-    2: "PROCESS_OBJECT",
-    3: "DOBOT_WORK",
-    4: "FINISH_WORK",
-    5: "EMERGENCY_ON",
-    6: "EMERGENCY_OFF",
-}
-NOW_STATE = 0
+'''''''''''''''''''''''''''''''''''''''''''''''''''
+대기 상태 : WAIT_SIGNAL
+공정 시작 : START_PROCESS
+공정 종료 : FINISH_PROCESS
+물체 탐지 : DETECT_OBJECT
+물체 분류 : CLASSIFY_OBJECT
+작업 완료 : COMPLETE_TASK
+비상 시작 : EMERGENCY_ON
+비상 종료 : EMERGENCY_OFF
+'''''''''''''''''''''''''''''''''''''''''''''''''''
 ###################################################
 
 #################### 기본 세팅부 ####################
 # Modbus 연결
-# client = ModbusTCPClient('IP', 'PORT_NUMBER')
-# client.connect()
+client = ModbusTCPClient('255.255.255.0', 'PORT_NUMBER')
+client.connect()
 
 # Dobot 초기화
 robot = dobot('COM6')
