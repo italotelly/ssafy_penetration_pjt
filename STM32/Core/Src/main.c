@@ -52,6 +52,9 @@ static uint8_t LED_R_flag = 0, LED_G_flag = 0, LED_B_flag = 0, LED_Y_flag = 0;
 // 0: 정상, 1: 비상 모드
 static uint8_t emergency_flag = 0;
 
+// 공정 버튼
+static uint8_t process_flag = 0;
+
 // 버튼 디바운스용
 #define MAIN_LOCKOUT_MS 250u
 static volatile uint32_t main_reenable_ms = 0;
@@ -90,6 +93,15 @@ static inline void set_from_bits(const char *b3) {
   LED_B_flag = (strncmp(b3, "011", 3) == 0);
   LED_Y_flag = (strncmp(b3, "100", 3) == 0);
   apply_leds();
+
+  if(strncmp(b3, "000", 3) == 0){
+	  HAL_GPIO_WritePin(CON_LED_GPIO_Port, CON_LED_Pin, 1);
+  }
+  else if(LED_R_flag || LED_G_flag || LED_B_flag || LED_Y_flag){
+  	  HAL_GPIO_WritePin(CON_LED_GPIO_Port, CON_LED_Pin, 0);
+  	  const char *msg = "101\r\n";
+  	  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 10);
+  }
 }
 
 // emergency btn 동작
@@ -100,6 +112,17 @@ static void send_emergency_on(void) {
 
 static void send_emergency_off(void) {
     const char *msg = "000\r\n";
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 10);
+}
+
+// 공정 시작 btn 동작
+static void send_process_st(void) {
+    const char *msg = "110\r\n";
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 10);
+}
+
+static void send_process_en(void) {
+    const char *msg = "100\r\n";
     HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 10);
 }
 
@@ -130,6 +153,49 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
             LED_R_flag = LED_G_flag = LED_B_flag = LED_Y_flag = 0;
             apply_leds();
         }
+    }
+
+    if (GPIO_Pin == ST_BTN_Pin && !emergency_flag) {
+
+            uint32_t now = HAL_GetTick();
+
+            // 디바운스(락아웃): 250ms 안에 또 들어오면 무시
+            if (main_reenable_ms && now < main_reenable_ms) {
+                return;
+            }
+            main_reenable_ms = now + MAIN_LOCKOUT_MS;
+
+            // 상태 토글
+            process_flag = 1;
+
+            if (process_flag) {
+                // 공정 시작: 서버에 110
+                send_process_st();
+            }
+            HAL_GPIO_WritePin(CON_LED_GPIO_Port, CON_LED_Pin, 1);
+    }
+    if (GPIO_Pin == EN_BTN_Pin && !emergency_flag) {
+
+            uint32_t now = HAL_GetTick();
+
+            // 디바운스(락아웃): 250ms 안에 또 들어오면 무시
+            if (main_reenable_ms && now < main_reenable_ms) {
+                return;
+            }
+            main_reenable_ms = now + MAIN_LOCKOUT_MS;
+
+            // 상태 토글
+            process_flag = 0;
+
+            if (!process_flag) {
+                // 공정 시작: 서버에 100
+                send_process_en();
+            }
+            HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, 0);
+            HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, 0);
+            HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, 0);
+            HAL_GPIO_WritePin(LED_Y_GPIO_Port, LED_Y_Pin, 0);
+            HAL_GPIO_WritePin(CON_LED_GPIO_Port, CON_LED_Pin, 0);
     }
 }
 /* USER CODE END 0 */

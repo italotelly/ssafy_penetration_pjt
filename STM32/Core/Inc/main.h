@@ -62,12 +62,20 @@ void Error_Handler(void);
 #define EM_BTN_EXTI_IRQn EXTI0_IRQn
 #define LED_Y_Pin GPIO_PIN_1
 #define LED_Y_GPIO_Port GPIOC
+#define ST_BTN_Pin GPIO_PIN_2
+#define ST_BTN_GPIO_Port GPIOC
+#define ST_BTN_EXTI_IRQn EXTI2_IRQn
+#define EN_BTN_Pin GPIO_PIN_3
+#define EN_BTN_GPIO_Port GPIOC
+#define EN_BTN_EXTI_IRQn EXTI3_IRQn
 #define LED_R_Pin GPIO_PIN_0
 #define LED_R_GPIO_Port GPIOA
 #define LED_G_Pin GPIO_PIN_1
 #define LED_G_GPIO_Port GPIOA
 #define LED_B_Pin GPIO_PIN_4
 #define LED_B_GPIO_Port GPIOA
+#define CON_LED_Pin GPIO_PIN_8
+#define CON_LED_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
 
