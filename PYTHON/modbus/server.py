@@ -17,7 +17,7 @@ class ModbusTCPServer:
         
         self.store = ModbusSlaveContext(
             di = ModbusSequentialDataBlock(0, [0]*1),
-            co = ModbusSequentialDataBlock(0, [0]*1),
+            co = ModbusSequentialDataBlock(0, [0]*5),
             ir = ModbusSequentialDataBlock(0, [0]*1),
             hr = ModbusSequentialDataBlock(0, [0]*65530),
         )

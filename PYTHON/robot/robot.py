@@ -1,5 +1,4 @@
 import DobotEDU
-import time
 
 class dobot:
     def __init__(self, port):
@@ -13,10 +12,10 @@ class dobot:
         self.device.disconnect_dobot(self.port)
 
     def home(self):
-        self.device.set_homecmd(self.port)
+        self.device.set_homecmd(self.port, is_queued=True, is_wait=False)
 
     def move(self, pos_x, pos_y, pos_z, pos_r):
-        self.device.set_ptpcmd(self.port, ptp_mode=2, x=pos_x, y=pos_y, z=pos_z, r=pos_r)
+        self.device.set_ptpcmd(self.port, ptp_mode=2, x=pos_x, y=pos_y, z=pos_z, r=pos_r, is_queued=True, is_wait=False)
     
     def suction(self, state):
         if state == 1:
@@ -24,6 +23,16 @@ class dobot:
         else:
             self.device.set_endeffector_suctioncup(self.port, enable=False, on=False)
     
+    def get_pose(self):
+        return self.device.get_pose(self.port)
+    
+    def is_reached(self, target_pose: list, tol=2.0):
+        current_pose = self.get_pose()
+        dx = abs(current_pose['x'] - target_pose[0])
+        dy = abs(current_pose['y'] - target_pose[1])
+        dz = abs(current_pose['z'] - target_pose[2])
+        return dx < tol and dy < tol and dz < tol
+        
     def stop(self):
         self.device.queuedcmd_stop(self.port, force_stop=True)
     
