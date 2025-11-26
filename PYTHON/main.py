@@ -18,76 +18,74 @@ import time
 비상 종료 : EMERGENCY_OFF
 '''
 
-# 현재 상태 변수
+# ---------- SYSTEM COMPONENTS ----------
+client = None
+vision = None
+robot = None
+comm = None
+
+# ------------- NOW_STATE --------------
 NOW_STATE = "WAIT_START"
 
-# 공정 시작 플래그
+# ------------ STATE FLAGS -------------
 START_PROCESS_FLAG = False
-# 공정 종료 플래그
 FINISH_PROCESS_FLAG = False
-# 분류 시작 플래그
 CLASSIFY_OBJECT_FLAG = False
-# 비상 상황 플래그
 EMERGENCY_FLAG = False
 
-# 색깔 코드
-COLOR_CODE = {
-    "RED": "001",
-    "GREEN": "010",
-    "BLUE": "011",
-}
-
-# 픽업 위치 1 (좌표 변환으로 변경 예정)
+# -------------- DOBOT VAR --------------
+HOME_POSITION = [209.75, 0, 99.96, 0]
 PICK_POSITION_1 = [141.87, -233.48, 87.7, -53.06]
-# 픽업 위치 2 (좌표 변환으로 변경 예정)
 PICK_POSITION_2 = [121.78, -257.6, 20.84, -64.7]
-# 분류 위치
 SORT_POSITION = {
     "RED":     [251.84, 66.75, -18.93, 14.84],
     "GREEN":   [256.83, -7.62, -17.89, -1.7],
     "BLUE":    [241.76, -86.3, -18.49, -19.65],
 }
-# 초기 위치
-HOME_POSITION = [209.75, 0, 99.96, 0]
-
-# 검출 색상 (전역 변수)
-last_detected_color = None
-
-# 비상 상황 관련 플래그
 step = 0
-# 비상 상황 관련 플래그
-temp = None
-# 비상 상황 관련 플래그
-cnt = 0
-# 비상 상황 관련 플래그
 move_sent = False
 
-###################################################
-#################### SETUP ####################
-# Modbus 연결
-client = ModbusTCPClient('192.168.110.101', 20000)
-client.connect()
-client.write_log("[MODBUS] Client connected successfully.")
-print("[MODBUS] Client connected successfully.")
+# -------------- D435i VAR --------------
+COLOR_CODE = {
+    "RED": "001",
+    "BLUE": "011",
+    "GREEN": "010",
+}
+last_detected_color = None
 
-# Dobot 초기화
-robot = dobot('COM6')
-robot.connect()
-robot.home()
-client.write_log("[DOBOT] Device connected successfully.")
-print("[DOBOT] Device connected successfully.")
+# ------------- EMERGENCY VAR -------------
+temp = None
+cnt = 0
 
-# UART 연결
-comm = uart('COM4', 9600)
-client.write_log("[UART] Device connected successfully.")
-print("[UART] Device connected successfully.")
+# ---------- SETUP FUNCTIONS ----------
+def initialize_modbus():
+    client = ModbusTCPClient('192.168.110.101', 20000)
+    client.connect()
+    client.write_log("[MODBUS] 서버와의 연결이 완료되었습니다.")
+    print("[MODBUS] 서버와의 연결이 완료되었습니다.")
+    return client
 
-# D435i 연결
-vision = RealSenseColorDetector(roi_area=(230, 280, 425, 475))
-client.write_log("[D435i] Device connected successfully.")
-print("[D435i] Device connected successfully.")
-###################################################
-################## STATE_FUNCTIONS ################
+def initialize_robot(client):
+    robot = dobot('COM6')
+    robot.connect()
+    robot.home()
+    client.write_log("[DOBOT] 장치 연결이 완료되었습니다.")
+    print("[DOBOT] 장치 연결이 완료되었습니다.")
+    return robot
+
+def initialize_uart(client):
+    comm = uart('COM4', 9600)
+    client.write_log("[UART] 장치 연결이 완료되었습니다.")
+    print("[UART] 장치 연결이 완료되었습니다.")
+    return comm
+
+def initialize_vision(client):
+    vision = RealSenseColorDetector(roi_area=(230, 280, 425, 475))
+    client.write_log("[D435i] 장치 연결이 완료되었습니다.")
+    print("[D435i] 장치 연결이 완료되었습니다.")
+    return vision
+
+# ---------- STATE FUNCTIONS ----------
 def wait_start_func():
     global START_PROCESS_FLAG
     
@@ -247,8 +245,8 @@ def finish_process_func():
         if step == 1:
             client.export_logs()
             return "WAIT_START"
-###################################################
-################## THREAD ##################
+
+# ---------- THREAD FUNCTIONS ----------
 def stm32_listener():
     print("[UART] stm32_listener thread started!")
     
@@ -295,8 +293,13 @@ def stm32_listener():
                 EMERGENCY_FLAG = False
                     
         time.sleep(0.01)
-####################################################
-################## MAIN ##################
+
+# -------------- MAIN --------------
+client = initialize_modbus()
+robot = initialize_robot(client)
+comm = initialize_uart(client)
+vision = initialize_vision(client)
+    
 t = threading.Thread(target=stm32_listener)
 t.start()
 
@@ -320,21 +323,20 @@ while True:
         move_sent = False
         time.sleep(0.01)
         continue
-    
+        
     if EMERGENCY_FLAG and cnt >= 1:
         robot.start()
         time.sleep(0.01)
         continue
-    
+        
     try:
         next(current)
-    
+        
     except StopIteration as e:
         NOW_STATE = e.value
         current = STATE_FUNCTIONS[NOW_STATE]()
-        
+            
     time.sleep(0.01)
-##########################################
 
 
 
