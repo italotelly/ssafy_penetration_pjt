@@ -24,7 +24,13 @@ class ModbusTCPClient:
             print(f"[CONNECTED]")
         else:
             print(f"[CONNECTION FAILED]")
-            
+    
+    def conveyor_on(self):
+        self.client.write_coil(0, True, slave=1)
+    
+    def conveyor_off(self):
+        self.client.write_coil(0, False, slave=1)
+    
     def write_log(self, message: str):
         now = datetime.now().strftime("[%H:%M]")
         log_line = f"{now} {message}"

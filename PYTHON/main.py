@@ -5,7 +5,12 @@ from modbus.client import ModbusTCPClient
 import cv2
 import threading
 import time
-
+##########MEMO#################
+'''
+1. FINISH_PROCESS 부분에서 HOMING EMERGENCY 가능한지 CHECK
+2. 
+'''
+###############################
 '''
 시작 대기 : WAIT_START
 공정 시작 : START_PROCESS
@@ -91,15 +96,15 @@ def wait_start_func():
     
     while True:
         if START_PROCESS_FLAG:
-            client.write_log("[SYSTEM] Start Process")
-            print("[SYSTEM] Start Process")
+            client.write_log("[SYSTEM] 공정 시작")
+            print("[SYSTEM] 공정 시작")
             START_PROCESS_FLAG = False
             return "START_PROCESS"
                 
         yield
 
 def start_process_func():
-    client.write_coil(True)
+    client.conveyor_on()
     yield
     return "DETECT_OBJECT"
 
@@ -116,12 +121,11 @@ def detect_object_func():
         yield
 
         if detected_color:
-            client.write_coil(False)
-            client.write_log(f"[D435i] Detected: {detected_color}")
-            print(f"[D435i] Detected: {detected_color}")
+            client.conveyor_off()
+            client.write_log(f"[D435i] {detected_color} 탐지")
+            print(f"[D435i] {detected_color} 탐지")
             last_detected_color = detected_color
             comm.send(COLOR_CODE[detected_color])
-            cv2.destroyWindow("D435i")
             return "WAIT_CLASSIFY"
         
         yield
@@ -141,8 +145,8 @@ def classify_object_func():
     global move_sent
     step = 0
     move_sent = False
-    client.write_log("[DOBOT] Start PICK & SORT")
-    print("[DOBOT] Start PICK & SORT")
+    client.write_log("[DOBOT] 분류 작업을 시작합니다.")
+    print("[DOBOT] 분류 작업을 시작합니다.")
     
     while True:
         if step == 0:
@@ -150,8 +154,7 @@ def classify_object_func():
                 robot.move(*PICK_POSITION_1)
                 move_sent = True
             
-            pose = robot.get_pose()
-            if is_reached(pose, PICK_POSITION_1):
+            if robot.is_reached(PICK_POSITION_1):
                 step = 1
                 move_sent = False
             yield
@@ -162,7 +165,7 @@ def classify_object_func():
                 move_sent = True
                 
             pose = robot.get_pose()
-            if is_reached(pose, PICK_POSITION_2):
+            if robot.is_reached(PICK_POSITION_2):
                 step = 2
                 move_sent = False 
             yield
@@ -179,7 +182,7 @@ def classify_object_func():
                 move_sent = True
             
             pose = robot.get_pose()
-            if is_reached(pose, PICK_POSITION_1):
+            if robot.is_reached(PICK_POSITION_1):
                 step = 4
                 move_sent = False
             yield
@@ -190,8 +193,7 @@ def classify_object_func():
                 robot.move(*sort_pos)
                 move_sent = True
             
-            pose = robot.get_pose()
-            if is_reached(pose, sort_pos):
+            if robot.is_reached(sort_pos):
                 step = 5
                 move_sent = False
             yield
@@ -206,19 +208,18 @@ def classify_object_func():
             
 def complete_task_func():
     global FINISH_PROCESS_FLAG
-    client.write_log("[DOBOT] Task Completed")
-    print(f"[DOBOT] Task Completed")
-    if not FINISH_PROCESS_FLAG:
-        client.write_coil(True)
-        comm.send("000")
-    
+    comm.send("000")
+    client.write_log("[DOBOT] 분류 작업을 완료하였습니다.")
+    print(f"[DOBOT] 분류 작업을 완료하였습니다.")
+        
     yield
     
     if FINISH_PROCESS_FLAG:
         FINISH_PROCESS_FLAG = False
         return "FINISH_PROCESS"
     
-    else:   
+    else:
+        client.conveyor_on()
         return "DETECT_OBJECT"
 
 def finish_process_func():
@@ -227,8 +228,8 @@ def finish_process_func():
     step = 0
     move_sent = False
     
-    client.write_log("[SYSTEM] Finish Process")
-    print("[SYSTEM] Finish Process")
+    client.write_log("[SYSTEM] 공정 종료")
+    print("[SYSTEM] 공정 종료")
     
     while True:
         if step == 0:
@@ -236,13 +237,13 @@ def finish_process_func():
                 robot.home()
                 move_sent = True
                 
-            pose = robot.get_pose()
-            if is_reached(pose, HOME_POSITION):
+            if robot.is_reached(HOME_POSITION):
                 step = 1
                 move_sent = False 
             yield
             
         if step == 1:
+            cv2.destroyWindow("D435i")
             client.export_logs()
             return "WAIT_START"
 
@@ -302,7 +303,6 @@ vision = initialize_vision(client)
     
 t1 = threading.Thread(target=stm32_listener)
 t1.start()
-
 
 STATE_FUNCTIONS = {
     "WAIT_START": wait_start_func,
