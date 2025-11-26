@@ -248,7 +248,7 @@ def finish_process_func():
 
 # ---------- THREAD FUNCTIONS ----------
 def stm32_listener():
-    print("[UART] stm32_listener thread started!")
+    print("[UART] STM32 수신 스레드를 시작합니다.")
     
     global START_PROCESS_FLAG
     global FINISH_PROCESS_FLAG
@@ -264,30 +264,30 @@ def stm32_listener():
         if receive_data:
             if receive_data == "110":
                 if NOW_STATE == "WAIT_START":
-                    client.write_log("[UART] Received: START_PROCESS(110) from STM32.")
-                    print("[UART] Received: START_PROCESS(110) from STM32.")
+                    client.write_log("[UART] STM32로부터 START_PROCESS(110) 신호를 수신했습니다.")
+                    print("[UART] STM32로부터 START_PROCESS(110) 신호를 수신했습니다.")
                     START_PROCESS_FLAG = True
             
             elif receive_data == "100":
                 if NOW_STATE != "WAIT_START":
-                    client.write_log("[UART] Received: FINISH_PROCESS(100) from STM32.")
-                    print("[UART] Received: FINISH_PROCESS(100) from STM32.")
+                    client.write_log("[UART] STM32로부터 FINISH_PROCESS(100) 신호를 수신했습니다.")
+                    print("[UART] STM32로부터 FINISH_PROCESS(100) 신호를 수신했습니다.")
                     FINISH_PROCESS_FLAG = True
                     
             elif receive_data == "101":
-                client.write_log("[UART] Received: CLASSIFY_OBJECT(101) from STM32.")
-                print("[UART] Received: CLASSIFY_OBJECT(101) from STM32.")
+                client.write_log("[UART] STM32로부터 CLASSIFY_OBJECT(101) 신호를 수신했습니다.")
+                print("[UART] STM32로부터 CLASSIFY_OBJECT(101) 신호를 수신했습니다.")
                 CLASSIFY_OBJECT_FLAG = True
             
             elif receive_data == "111":
-                client.write_log("[UART] Received: EMERGENCY_ON(111) from STM32.")
-                print("[UART] Received: EMERGENCY_ON(111) from STM32.")
+                client.write_log("[UART] STM32로부터 EMERGENCY_ON(111) 신호를 수신했습니다.")
+                print("[UART] STM32로부터 EMERGENCY_ON(111) 신호를 수신했습니다.")
                 temp = step
                 EMERGENCY_FLAG = True
             
             elif receive_data == "000":
-                client.write_log("[UART] Received: EMERGENCY_OFF(000) from STM32.")
-                print("[UART] Received: EMERGENCY_OFF(000) from STM32.")
+                client.write_log("[UART] STM32로부터 EMERGENCY_OFF(000) 신호를 수신했습니다.")
+                print("[UART] STM32로부터 EMERGENCY_OFF(000) 신호를 수신했습니다.")
                 step = temp
                 cnt = 0
                 EMERGENCY_FLAG = False
@@ -300,8 +300,9 @@ robot = initialize_robot(client)
 comm = initialize_uart(client)
 vision = initialize_vision(client)
     
-t = threading.Thread(target=stm32_listener)
-t.start()
+t1 = threading.Thread(target=stm32_listener)
+t1.start()
+
 
 STATE_FUNCTIONS = {
     "WAIT_START": wait_start_func,
@@ -324,11 +325,16 @@ while True:
         time.sleep(0.01)
         continue
         
-    if EMERGENCY_FLAG and cnt >= 1:
+    if EMERGENCY_FLAG and cnt == 1:
         robot.start()
+        cnt += 1
         time.sleep(0.01)
         continue
-        
+    
+    if EMERGENCY_FLAG and cnt > 1:
+        time.sleep(0.01)
+        continue
+    
     try:
         next(current)
         
