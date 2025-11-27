@@ -357,6 +357,7 @@ def stm32_listener():
                 temp = step
                 conveyor_temp = CONVEYOR_FLAG
                 EMERGENCY_FLAG = True
+                client.turtlebot_emergency_on()
             
             elif receive_data == "000":
                 client.write_log("[UART] STM32로부터 EMERGENCY_OFF(000) 신호를 수신했습니다.")
@@ -371,6 +372,7 @@ def stm32_listener():
                     CONVEYOR_FLAG = False
                 conveyor_temp = None
                 EMERGENCY_FLAG = False
+                client.turtlebot_emergency_off()
                     
         time.sleep(0.01)
 

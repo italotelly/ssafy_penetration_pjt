@@ -34,6 +34,12 @@ class ModbusTCPClient:
     def turtlebot_start(self):
         self.client.write_coil(1, False, slave=1)
     
+    def turtlebot_emergency_on(self):
+        self.client.write_coil(2, True, slave=1)
+        
+    def turtlebot_emergency_off(self):
+        self.client.write_coil(2, False, slave=1)    
+    
     def read_turtlebot_status(self):
         result = self.client.read_coils(1, 1, slave=1)
         return result.bits[0]
