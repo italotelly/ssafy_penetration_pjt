@@ -89,6 +89,7 @@ CALIB_ROBOT_POINTS = [
     (229.48, -100.59, 22.97),
     (192.05,  -70.36, 22.96),
 ]
+
 # ---------- SETUP FUNCTIONS ----------
 def initialize_modbus():
     client = ModbusTCPClient('192.168.110.101', 20000)
@@ -120,7 +121,7 @@ def initialize_vision(client):
 def initialize_transformer(vision):
     transformer = HandEyeCalibrator(vision.intr)
     transformer.calibrate(CALIB_CAM_POINTS, CALIB_ROBOT_POINTS)
-    
+
     return transformer
 
 # ---------- STATE FUNCTIONS ----------

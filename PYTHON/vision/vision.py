@@ -9,9 +9,13 @@ class RealSenseColorDetector:
         self.pipeline = rs.pipeline()
         config = rs.config()
         config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+        config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
         profile = self.pipeline.start(config)
 
         self.intr = profile.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
+        
+        self.depth_scale = profile.get_device().first_depth_sensor().get_depth_scale()
+        self.align = rs.align(rs.stream.color)
         
     def detect_color(self, hsv_roi):
         lower_red1 = np.array([0, 120, 70])
@@ -59,7 +63,7 @@ class RealSenseColorDetector:
         elif biggest == "YELLOW":
             return "YELLOW", mask_yellow
     
-    def process_frame(self, color_image):
+    def process_frame(self, color_image, depth_frame):
         hsv_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2HSV)
         
         roi = color_image[self.y1:self.y2, self.x1:self.x2]
@@ -75,6 +79,8 @@ class RealSenseColorDetector:
         # ROI 영역 하얀색 네모박스 생성
         cv2.rectangle(masked_view, (self.x1, self.y1), (self.x2, self.y2), (255,255,255), 2)
 
+        u = v = depth = None
+        
         if detected_color:
             contours, _ = cv2.findContours(selected_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -86,28 +92,34 @@ class RealSenseColorDetector:
 
                 X = x + self.x1
                 Y = y + self.y1
-
+                
                 cv2.rectangle(masked_view, (X, Y), (X + w_box, Y + h_box), (0, 255, 0), 2)
+                
                 cx = X + w_box // 2
                 cy = Y + h_box // 2
+                
+                depth = depth_frame.get_distance(cx, cy) * 1000
+                u, v = cx, cy
 
                 cv2.drawMarker(masked_view, (cx, cy), (0, 255, 0), cv2.MARKER_CROSS, 20, 2)
                 cv2.putText(masked_view, detected_color, (X, Y - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
         
-        return masked_view, detected_color
+        return masked_view, detected_color, (u, v, depth)
     
     def detect_one_frame(self):
         frames = self.pipeline.wait_for_frames()
-        color_frame = frames.get_color_frame()
+        aligned = self.align.process(frames)
         
-        if not color_frame:
-            return None, None
+        color_frame = aligned.get_color_frame()
+        depth_frame = aligned.get_depth_frame()
+        
+        if not color_frame or not depth_frame:
+            return None, None, (None, None, None)
         
         color_image = np.asanyarray(color_frame.get_data())
-        view, detected_color = self.process_frame(color_image)
         
-        return view, detected_color
+        return self.process_frame(color_image, depth_frame)
     
     def stop(self):
         self.pipeline.stop()
