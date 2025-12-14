@@ -3,7 +3,7 @@
     <div class="section-title-row">
       <div>
         <h2 class="section-title">Dobot</h2>
-        <p class="section-caption">팔 상태 / 부하 / 비상 여부</p>
+        <span class="text-muted">{{ nowText }}</span>
       </div>
       <span class="badge badge-info">샘플 레이아웃</span>
     </div>
@@ -52,7 +52,32 @@
 </template>
 
 <script setup>
-// Dobot도 지금은 정적 예시만
+import { ref, onMounted, onBeforeUnmount } from "vue";
+/* ===============================
+ * 1) 시간
+ * =============================== */
+const nowText = ref("");
+let timerId = 0;
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+function updateNow() {
+  const d = new Date();
+  nowText.value =
+    `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ` +
+    `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+
+onMounted(() => {
+  updateNow();
+  timerId = setInterval(updateNow, 1000);
+});
+
+onBeforeUnmount(() => {
+  clearInterval(timerId);
+});
+
 </script>
 
 <style scoped>

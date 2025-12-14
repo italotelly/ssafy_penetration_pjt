@@ -12,6 +12,9 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
+// public 파일인 map 서빙
+app.use("/public", express.static(path.join(__dirname, "../public")));
+
 // 간단한 상태 확인용
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });

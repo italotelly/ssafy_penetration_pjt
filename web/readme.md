@@ -107,10 +107,63 @@ ex)
 | ERROR | 즉시 조치 필요                      |
 | FATAL | 시스템 중단 수준 (나중에 추가 가능) |
 
-```
+## 2. TurtleBot 탭
 
-```
+### Critical
 
-```
+- Node.js에서 ROS2 Humble Topic 받기 !!
 
-```
+- Windows는 그냥 웹서버/WS만 하고, ROS 값은 rosbridge로 받기
+
+  ```
+  sudo apt install ros-humble-rosbridge-server
+  ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+  ```
+
+  ```
+  // frontend install
+  npm i js-yaml
+  npm i roslib
+  ```
+
+1.  우측 Map + 로봇 위치/이동에 필요한 ROS Topic
+
+    - /amcl_pose 또는
+
+    - /tf (map → base_link)
+
+2.  좌측 TurtleBot 상태 정보
+
+    - /battery_state (sensor_msgs/BatteryState)
+
+      percentage → State of Charge
+
+      voltage → Voltage
+
+      current → Current
+
+    - /odom (nav_msgs/Odometry)
+
+      twist.twist.linear.x → Linear Velocity
+
+      twist.twist.angular.z → Angular Velocity
+
+      Status (Cruising / Stopped 등)
+
+      ```
+         if |linear| < 0.01 && |angular| < 0.01 → "Stopped"
+         else if |angular| > 0.2 → "Turning"
+         else → "Cruising"
+      ```
+
+    - /joint_states (sensor_msgs/JointState)
+
+      name[]
+
+      velocity[] → Left / Right vel
+
+      effort[] → Torque / Effort
+
+- Turtlebot 탭 진입 → backend가 ROS 토픽 구독 시작 → 프론트에 push
+
+- Turtlebot 탭 이탈 → backend가 구독 중단 → 리소스/트래픽 절약

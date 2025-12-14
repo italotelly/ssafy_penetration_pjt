@@ -36,9 +36,6 @@
         <div>
           <div class="topbar-title">Realtime Monitor</div>
         </div>
-        <div class="topbar-right">
-          Copyright 2025. Kwon, Ryu All rights reserved.
-        </div>
       </header>
 
       <div class="main-content">
@@ -46,6 +43,11 @@
           <RouterView />
         </div>
       </div>
+      <header class="downbar">
+        <div class="downbar-right">
+          Copyright 2025. Kwon, Ryu All rights reserved.
+        </div>
+      </header>
     </main>
   </div>
 </template>
