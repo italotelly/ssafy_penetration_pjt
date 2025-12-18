@@ -107,6 +107,8 @@ ex)
 | ERROR | 즉시 조치 필요                      |
 | FATAL | 시스템 중단 수준 (나중에 추가 가능) |
 
+---
+
 ## 2. TurtleBot 탭
 
 ### Critical
@@ -167,3 +169,15 @@ ex)
 - Turtlebot 탭 진입 → backend가 ROS 토픽 구독 시작 → 프론트에 push
 
 - Turtlebot 탭 이탈 → backend가 구독 중단 → 리소스/트래픽 절약
+
+---
+
+## 3. Dobot Sensor 탭
+
+### 구조
+
+(ESP32+MPU6050 → Modbus 서버 PC → Node 백엔드 → Vue 대시보드)
+
+```
+npm i chart.js
+```

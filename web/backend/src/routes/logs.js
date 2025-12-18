@@ -42,7 +42,7 @@ router.get("/", async (req, res) => {
   } catch (err) {
     if (err.code === "ENOENT") {
       console.warn("[logs] log.txt not found:", LOG_PATH);
-      return res.json([]); // 파일 없으면 빈 배열
+      return res.json([]);
     }
     console.error("[logs] read error:", err);
     res.status(500).json({ error: "Failed to read log file" });

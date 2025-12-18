@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "axios": "^1.13.2",
+    "chart.js": "^4.5.1",
     "js-yaml": "^4.1.1",
     "roslib": "^2.0.1",
     "socket.io-client": "^4.8.1",

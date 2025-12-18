@@ -21,6 +21,7 @@
               <span>Battery</span>
               <span class="text-muted">잔량 · 전압</span>
             </div>
+
             <div class="bar-row">
               <div class="bar-label">
                 <span>State of Charge</span>
@@ -58,6 +59,7 @@
               <span>Motion</span>
               <span class="text-muted">속도 · 방향</span>
             </div>
+
             <div class="bar-row">
               <div class="bar-label">
                 <span>Linear Velocity</span>
@@ -86,42 +88,36 @@
             </div>
           </div>
 
-          <!-- Wheel Joints -->
+          <!-- Navigation -->
           <div class="content-card tb-card">
             <div class="tb-card-header">
-              <span>Wheel Joints</span>
-              <span class="text-muted">vel · effort</span>
+              <span>Navigation</span>
+              <span class="text-muted">mission · emergency</span>
             </div>
-           <div class="bar-row">
+
+            <div class="bar-row">
               <div class="bar-label">
-                <span>Left vel</span>
-                <span class="text-muted">{{ joints.left.vel.toFixed(2) }}</span>
-              </div>
-              <div class="bar-track">
-                <div class="bar-fill" :style="{ width: minBar(leftVelPct) + '%' }"></div>
+                <span>Mission</span>
+                <span class="text-muted">{{ nav.missionState }}</span>
               </div>
             </div>
 
             <div class="bar-row">
               <div class="bar-label">
-                <span>Right vel</span>
-                <span class="text-muted">{{ joints.right.vel.toFixed(2) }}</span>
-              </div>
-              <div class="bar-track">
-                <div class="bar-fill" :style="{ width: minBar(rightVelPct) + '%' }"></div>
+                <span>Emergency</span>
+                <span class="text-muted">{{ nav.emergency ? "걸림" : "안걸림" }}</span>
               </div>
             </div>
 
             <div class="bar-row">
               <div class="bar-label">
-                <span>Effort(avg)</span>
-                <span class="text-muted">{{ effortAvg.toFixed(2) }}</span>
+                <span>Work wait</span>
+                <span class="text-muted">{{ nav.waitRemaining }} s</span>
               </div>
               <div class="bar-track">
-                <div class="bar-fill" :style="{ width: minBar(effPct) + '%' }"></div>
+                <div class="bar-fill" :style="{ width: waitPct + '%' }"></div>
               </div>
-          </div>
-
+            </div>
           </div>
         </div>
       </div>
@@ -153,18 +149,68 @@ import { computed, onMounted, onBeforeUnmount, reactive, ref } from "vue";
 import * as ROSLIB from "roslib";
 import YAML from "js-yaml";
 
-// 막대용 정규화(0~100)
+/* ===============================
+ * Utils
+ * =============================== */
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const toPct = (v01) => Math.round(clamp01(v01) * 100);
 
-// 배터리 기준값(원하면 바꿔)
+// 0%일 때도 최소 4%는 보이게
+function minBar(pct, min = 4) {
+  if (!rosConnected.value) return min;
+  return pct === 0 ? min : pct;
+}
+
+/* ===============================
+ * Config
+ * =============================== */
+// Vite public 폴더는 "/public/xxx"가 아니라 "/xxx" 로 접근
+const mapUrl = "public/maps/final.png";
+const MAP_YAML_URL = "public/maps/final.yaml";
+const ROSBRIDGE_URL = "ws://172.30.1.16:9090";
+const UNLOADING_SECONDS = 10; // work target 대기 10초
+
+/* ===============================
+ * Time
+ * =============================== */
+const nowText = ref("");
+let timerId = 0;
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+function updateNow() {
+  const d = new Date();
+  nowText.value =
+    `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ` +
+    `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+
+/* ===============================
+ * State
+ * =============================== */
+const rosConnected = ref(false);
+
+const battery = reactive({ soc: 0, voltage: 0, current: 0 });
+const motion = reactive({ lin: 0, ang: 0, status: "Offline" });
+const poseWorld = reactive({ x: 0, y: 0, yaw: 0 });
+
+const nav = reactive({
+  missionState: "N/A",
+  emergency: false,
+  waitRemaining: 0,
+});
+
+// Battery normalization
 const VOLT_MIN = 22.0;
 const VOLT_MAX = 26.0;
-const CURR_MAX_ABS = 5.0;      // |A|
-const LIN_MAX = 0.35;          // m/s (turtlebot3 일반 주행 상한)
-const ANG_MAX = 1.8;           // rad/s
-const WHEEL_VEL_MAX = 10.0;    // rad/s (대충 상한)
-const EFF_MAX = 1.0;           // effort 상한(환경마다 다름, 우선 1.0)
+const CURR_MAX_ABS = 5.0;
+const LIN_MAX = 0.35;
+const ANG_MAX = 1.8;
+
+const socText = computed(() =>
+  battery.soc < 0 ? "N/A" : `${(battery.soc * 100).toFixed(0)} %`
+);
 
 const socPct = computed(() => (battery.soc < 0 ? 0 : toPct(battery.soc)));
 
@@ -181,76 +227,19 @@ const currPct = computed(() => {
 const linPct = computed(() => toPct(Math.abs(motion.lin) / LIN_MAX));
 const angPct = computed(() => toPct(Math.abs(motion.ang) / ANG_MAX));
 
-const leftVelPct = computed(() => toPct(Math.abs(joints.left.vel) / WHEEL_VEL_MAX));
-const rightVelPct = computed(() => toPct(Math.abs(joints.right.vel) / WHEEL_VEL_MAX));
-
-const effortAvg = computed(() => (Math.abs(joints.left.eff) + Math.abs(joints.right.eff)) / 2);
-const effPct = computed(() => toPct(effortAvg.value / EFF_MAX));
-
-// 0%일 때도 최소 4%는 보이게
-function minBar(pct, min = 4) {
-  if (!rosConnected.value) return min;   // OFFLINE이면 항상 최소
-  return pct === 0 ? min : pct;
-}
-
-
-// 로봇 이미지 추가
-const robotImg = new Image();
-robotImg.src = "http://172.30.1.32:3000/public/icons/turtlebot.png";
-
-let robotImgReady = false;
-robotImg.onload = () => {
-  robotImgReady = true;
-};
-
-
-/* ===============================
- * 0) 주소 설정
- * =============================== */
-const mapUrl = "http://172.30.1.32:3000/public/maps/final.png";
-const MAP_YAML_URL = "http://172.30.1.32:3000/public/maps/final.yaml";
-const ROSBRIDGE_URL = "ws://172.30.1.69:9090";
-
-/* ===============================
- * 1) 시간
- * =============================== */
-const nowText = ref("");
-let timerId = 0;
-
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
-function updateNow() {
-  const d = new Date();
-  nowText.value =
-    `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ` +
-    `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
-}
-
-/* ===============================
- * 2) ROS 상태 값
- * =============================== */
-const rosConnected = ref(false);
-
-const battery = reactive({ soc: 0, voltage: 0, current: 0 });
-const motion = reactive({ lin: 0, ang: 0, status: "Offline" });
-const joints = reactive({
-  left: { vel: 0, eff: 0 },
-  right: { vel: 0, eff: 0 },
+const waitPct = computed(() => {
+  // 10초에서 0초로 내려갈 때 progress가 차오르게 (0% -> 100%)
+  const done01 = (UNLOADING_SECONDS - nav.waitRemaining) / UNLOADING_SECONDS;
+  return toPct(done01);
 });
-const poseWorld = reactive({ x: 0, y: 0, yaw: 0 });
-
-const socText = computed(() =>
-  battery.soc < 0 ? "N/A" : `${(battery.soc * 100).toFixed(0)} %`
-);
 
 /* ===============================
- * 3) Map Meta (YAML)
+ * Map Meta (YAML)
  * =============================== */
 const mapMeta = reactive({
   resolution: 0.05,
-  originX: -3.42,
-  originY: -3.35,
+  originX: 0,
+  originY: 0,
   imgW: 0,
   imgH: 0,
   scaleX: 1,
@@ -268,10 +257,16 @@ async function loadMapYaml() {
 }
 
 /* ===============================
- * 4) Canvas / Map Overlay
+ * Canvas / Overlay
  * =============================== */
 const imgRef = ref(null);
 const canvasRef = ref(null);
+
+// 로봇 이미지
+const robotImg = new Image();
+robotImg.src = "public/icons/turtlebot.png";
+let robotImgReady = false;
+robotImg.onload = () => (robotImgReady = true);
 
 function worldToCanvas(x, y) {
   if (!mapMeta.ready) return { px: 0, py: 0 };
@@ -303,6 +298,17 @@ async function onMapLoaded() {
   drawOverlay();
 }
 
+function drawRobot(ctx, x, y, yaw) {
+  if (!robotImgReady) return;
+
+  const size = 32;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(yaw);
+  ctx.drawImage(robotImg, -size, -size, size * 2, size * 2);
+  ctx.restore();
+}
+
 function drawOverlay() {
   const canvas = canvasRef.value;
   if (!canvas) return;
@@ -313,53 +319,26 @@ function drawOverlay() {
   const { px, py } = worldToCanvas(poseWorld.x, poseWorld.y);
   drawRobot(ctx, px, py, poseWorld.yaw);
 
+  // 점 표시(옵션)
   ctx.beginPath();
   ctx.arc(px, py, 4, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(31,41,51,0.8)";
   ctx.fill();
 }
 
-function drawRobot(ctx, x, y, yaw) {
-  if (!robotImgReady) return;
-
-  const size = 32; // 화면에 보일 로봇 크기(px)
-
-  ctx.save();
-  
-  // 1) 로봇 위치로 이동
-  ctx.translate(x, y);
-
-  // 2) 회전
-  // PNG가 "위쪽이 전방" 기준이면 yaw - Math.PI / 2 필요 없음
-  ctx.rotate(yaw);
-
-  // 3) 이미지 중심 맞춰서 그리기
-  ctx.drawImage(
-    robotImg,
-    -size,
-    -size,
-    size * 2,
-    size * 2
-  );
-
-  ctx.restore();
-}
-
-
 function handleResize() {
   onMapLoaded();
 }
 
 /* ===============================
- * 5) ROS (rosbridge)
+ * ROS (rosbridge)
  * =============================== */
-let ros, batteryTopic, odomTopic, jointTopic, amclTopic;
+let ros;
+let batteryTopic, odomTopic, amclTopic;
+let missionTopic, emergencyTopic, waitTopic;
 
 function quatToYaw(q) {
-  return Math.atan2(
-    2 * (q.w * q.z + q.x * q.y),
-    1 - 2 * (q.y * q.y + q.z * q.z)
-  );
+  return Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
 }
 
 function computeStatus(l, a) {
@@ -372,13 +351,15 @@ function connectRos() {
   ros = new ROSLIB.Ros({ url: ROSBRIDGE_URL });
 
   ros.on("connection", () => {
+    console.log("ROS CONNECTED");
     rosConnected.value = true;
     motion.status = "Connected";
 
+    // Battery (실기에서 publish 되면 값 들어옴)
     batteryTopic = new ROSLIB.Topic({
       ros,
       name: "/battery_state",
-      messageType: "sensor_msgs/BatteryState",
+      messageType: "sensor_msgs/msg/BatteryState",
     });
     batteryTopic.subscribe((m) => {
       battery.soc = m.percentage ?? -1;
@@ -386,57 +367,88 @@ function connectRos() {
       battery.current = m.current ?? 0;
     });
 
+    // Odom
     odomTopic = new ROSLIB.Topic({
       ros,
       name: "/odom",
       messageType: "nav_msgs/Odometry",
     });
     odomTopic.subscribe((m) => {
-      motion.lin = m.twist.twist.linear.x;
-      motion.ang = m.twist.twist.angular.z;
+      motion.lin = m.twist.twist.linear.x ?? 0;
+      motion.ang = m.twist.twist.angular.z ?? 0;
       motion.status = computeStatus(motion.lin, motion.ang);
     });
 
-    jointTopic = new ROSLIB.Topic({
-      ros,
-      name: "/joint_states",
-      messageType: "sensor_msgs/JointState",
-    });
-    jointTopic.subscribe((m) => {
-      const li = m.name.findIndex((n) => n.includes("left") && n.includes("wheel"));
-      const ri = m.name.findIndex((n) => n.includes("right") && n.includes("wheel"));
-      joints.left.vel = li >= 0 ? m.velocity[li] : 0;
-      joints.left.eff = li >= 0 ? m.effort[li] : 0;
-      joints.right.vel = ri >= 0 ? m.velocity[ri] : 0;
-      joints.right.eff = ri >= 0 ? m.effort[ri] : 0;
-    });
-
+    // AMCL
     amclTopic = new ROSLIB.Topic({
       ros,
       name: "/amcl_pose",
       messageType: "geometry_msgs/PoseWithCovarianceStamped",
     });
     amclTopic.subscribe((m) => {
-      poseWorld.x = m.pose.pose.position.x;
-      poseWorld.y = m.pose.pose.position.y;
+      poseWorld.x = m.pose.pose.position.x ?? 0;
+      poseWorld.y = m.pose.pose.position.y ?? 0;
       poseWorld.yaw = quatToYaw(m.pose.pose.orientation);
       drawOverlay();
     });
+
+    // ===== UI Topics from your NAV node =====
+    missionTopic = new ROSLIB.Topic({
+      ros,
+      name: "/ui/mission_state",
+      messageType: "std_msgs/msg/String",
+    });
+    missionTopic.subscribe((m) => {
+      nav.missionState = m.data ?? "N/A";
+    });
+
+    emergencyTopic = new ROSLIB.Topic({
+      ros,
+      name: "/ui/emergency",
+      messageType: "std_msgs/msg/Bool",
+    });
+    emergencyTopic.subscribe((m) => {
+      nav.emergency = !!m.data;
+    });
+
+    waitTopic = new ROSLIB.Topic({
+      ros,
+      name: "/ui/wait_remaining",
+      messageType: "std_msgs/msg/Int32",
+    });
+    waitTopic.subscribe((m) => {
+      const v = Number(m.data);
+      nav.waitRemaining = Number.isFinite(v) ? v : 0;
+    });
   });
 
-  ros.on("close", () => (rosConnected.value = false));
+  ros.on("error", (e) => {
+    console.error("ROS ERROR", e);
+    rosConnected.value = false;
+    motion.status = "Offline";
+  });
+
+  ros.on("close", () => {
+    console.warn("ROS CLOSED");
+    rosConnected.value = false;
+    motion.status = "Offline";
+  });
 }
 
 function disconnectRos() {
   batteryTopic?.unsubscribe();
   odomTopic?.unsubscribe();
-  jointTopic?.unsubscribe();
   amclTopic?.unsubscribe();
+
+  missionTopic?.unsubscribe();
+  emergencyTopic?.unsubscribe();
+  waitTopic?.unsubscribe();
+
   ros?.close();
 }
 
 /* ===============================
- * 6) Lifecycle
+ * Lifecycle
  * =============================== */
 onMounted(() => {
   updateNow();
@@ -451,7 +463,6 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
 });
 </script>
-
 
 <style scoped>
 .tb-layout {
