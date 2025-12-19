@@ -45,9 +45,9 @@ TURTLEBOT_BUSY_FLAG = False
 HOME_POS = [209.75, 0, 99.96, 0]
 PICK_POS = None
 SORT_POS = {
-    "RED":     [152.29, 222.28, 33.36, 55.53], # 실측해서 넣자.
-    "GREEN":   [152.29, 222.28, 33.36, 55.53], # 실측해서 넣자.
-    "BLUE":    [152.29, 222.28, 33.36, 55.53], # 실측해서 넣자.
+    "RED":     [217.09, 6.2, -27.86, 1.64], # 실측해서 넣자.
+    "GREEN":   [217.09, 6.2, -27.86, 1.64], # 실측해서 넣자.
+    "BLUE":    [217.09, 6.2, -27.86, 1.64], # 실측해서 넣자.
 }
 step = 0
 move_sent = False
@@ -69,24 +69,26 @@ cnt = 0
 
 # ------------ Transformer VAR ------------
 CALIB_CAM_POINTS = [
-    (295, 117, 333),
-    (216, 189, 335),
-    (338, 104, 330),
-    (413, 166, 328),
-    (222, 125, 336),
-    (193, 184, 336),
-    (328, 179, 330),
-    (440, 182, 326),
+    (226, 95, 332),
+    (233, 155, 330),
+    (232, 223, 325),
+    (287, 95, 332),
+    (299, 151, 329),
+    (295, 217, 325),
+    (354, 102, 330),
+    (360, 164, 328),
+    (374, 227, 324),
 ]
 CALIB_ROBOT_POINTS = [
-    (175.61, -76.88, 28.46),
-    (214.46, -121.17, 20.34),
-    (169.48, -52.67, 31.51),
-    (207.84, -12.8, 28.79),
-    (180.6, -120.45, 21.58),
-    (208.48, -135.32, 20.15),
-    (212.02, -59.71, 30.05),
-    (213.31, 2.74, 31.24),
+    (-55.53, -198.94, 21.5),
+    (-51.79, -230.09, 17.22),
+    (-53.82, -269.82, 23.09),
+    (-21.88, -200.61, 23.16),
+    (-15.8, -230.43, 22.99),
+    (-19.6, -271.12, 23.24),
+    (16.36, -205.63, 23.32),
+    (16.33, -241.95, 23.89),
+    (21.95, -275.97, 23.9),
 ]
 
 # ---------- SETUP FUNCTIONS ----------
@@ -99,7 +101,7 @@ def initialize_modbus():
 def initialize_robot():
     robot = dobot('COM6')
     robot.connect()
-    robot.w_home()
+    robot.home()
     logger.log("[initialize_robot()] Dobot 연결 및 Homing 완료")
     return robot
 
@@ -109,7 +111,7 @@ def initialize_uart():
     return comm
 
 def initialize_vision():
-    vision = RealSenseColorDetector(roi_area=(75, 240, 115, 170))
+    vision = RealSenseColorDetector(roi_area=(80, 240, 270, 320))
     logger.log("[initialize_vision()] D435i 연결 완료")
     return vision
 
@@ -440,7 +442,7 @@ def finish_process_func():
         if step == 0:
             if not move_sent:
                 logger.log(f"[finish_process_func()] robot.home() 합니다. step : {step}")
-                robot.home()
+                robot.moveJ(*HOME_POS)
                 move_sent = True
                 logger.log(f"[finish_process_func()] move_sent를 True로 변경합니다 move_sent : {move_sent}")
                 

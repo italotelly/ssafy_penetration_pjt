@@ -32,7 +32,7 @@ class dobot:
     def get_pose(self):
         return self.device.get_pose(self.port)
     
-    def is_reached(self, target_pose: list, tol=2.0):
+    def is_reached(self, target_pose: list, tol=1.0):
         current_pose = self.get_pose()
         dx = abs(current_pose['x'] - target_pose[0])
         dy = abs(current_pose['y'] - target_pose[1])
