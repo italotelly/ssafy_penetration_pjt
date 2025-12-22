@@ -8,4 +8,3 @@
 8,2025-12-10 23:55:18,INFO,TurtleBot,Obstacle avoided successfully
 9,2025-12-10 23:55:21,ERROR,TurtleBot,Battery voltage dropped below threshold
 10,2025-12-10 23:55:25,INFO,System,Emergency state released by operator
-11,2025-12-10 23:55:25,INFO,System,Emergency state released by operator
