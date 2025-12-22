@@ -1,87 +1,93 @@
 import numpy as np
+import pandas as pd
 from keras.models import Sequential
 from keras.layers import LSTM, RepeatVector, TimeDistributed, Dense
-import pandas as pd
-from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
+from matplotlib import pyplot as plt
 
-dataframe = pd.read_csv('mpu6050_train.csv') # (41902, 7)
-df = dataframe[['Date', 'Close']].copy() # (7186, 2)
+dataframe = pd.read_csv("mpu6050_train.csv")
 
-df['Date'] = pd.to_datetime(df['Date'])
+TIME_COL = 't'
+FEATURE_COLS = ['AcX', 'AcY', 'AcZ', 'GyX', 'GyY', 'GyZ']
 
-train = df.loc[df['Date'] <= '2020-12-31'].copy() # (5948, 2)
-test = df.loc[df['Date'] > '2020-12-31'].copy() # (1238, 2)
+df = dataframe[[TIME_COL] + FEATURE_COLS].copy()
+df = df.sort_values(TIME_COL).reset_index(drop=True)
+
+split_idx = int(len(df) * 0.8)
+
+train = df.iloc[:split_idx].copy()
+test  = df.iloc[split_idx:].copy()
 
 scaler = StandardScaler()
-scaler = scaler.fit(train[['Close']])
+scaler.fit(train[FEATURE_COLS])
 
-train['Close'] = scaler.transform(train[['Close']])
-test['Close'] = scaler.transform(test[['Close']])
+train[FEATURE_COLS] = scaler.transform(train[FEATURE_COLS])
+test[FEATURE_COLS]  = scaler.transform(test[FEATURE_COLS])
 
-seq_size = 30
+SEQ_SIZE = 30
 
-def to_sequences(x, y, seq_size=1):
-    x_values = []
-    y_values = []
-    
-    for i in range(len(x)-seq_size):
-        x_values.append(x.iloc[i:(i+seq_size)].values)
-        y_values.append(y.iloc[i+seq_size])
-    
-    return np.array(x_values), np.array(y_values)
+def to_sequences(data, seq_size):
+    sequences = []
+    for i in range(len(data) - seq_size):
+        sequences.append(data.iloc[i:i+seq_size].values)
+    return np.array(sequences)
 
-trainX, trainY = to_sequences(train[['Close']], train['Close'], seq_size)
-testX, testY = to_sequences(test[['Close']], test['Close'], seq_size)
+trainX = to_sequences(train[FEATURE_COLS], SEQ_SIZE)
+testX  = to_sequences(test[FEATURE_COLS], SEQ_SIZE)
+
+print("trainX shape:", trainX.shape)
+print("testX shape :", testX.shape)
 
 model = Sequential()
-model.add(
-    LSTM(
-        128,
-        activation='relu',
-        input_shape=(trainX.shape[1], trainX.shape[2]),
-        return_sequences=True
-    )
-)
-model.add(
-    LSTM(
-        64,
-        activation='relu',
-        return_sequences=False
-    )
-) 
-model.add(RepeatVector(trainX.shape[1]))
-model.add(
-    LSTM(
-        64,
-        activation='relu',
-        return_sequences=True
-    )
-)
-model.add(
-    LSTM(
-        128,
-        activation='relu',
-        return_sequences=True
-    )
-)
-model.add(TimeDistributed(Dense(trainX.shape[2])))
+
+model.add(LSTM(
+    128,
+    activation='relu',
+    input_shape=(SEQ_SIZE, len(FEATURE_COLS)),
+    return_sequences=True
+))
+
+model.add(LSTM(
+    64,
+    activation='relu',
+    return_sequences=False
+))
+
+model.add(RepeatVector(SEQ_SIZE))
+
+model.add(LSTM(
+    64,
+    activation='relu',
+    return_sequences=True
+))
+
+model.add(LSTM(
+    128,
+    activation='relu',
+    return_sequences=True
+))
+
+model.add(TimeDistributed(Dense(len(FEATURE_COLS))))
 
 model.compile(optimizer='adam', loss='mae')
 model.summary()
 
-history = model.fit(trainX, trainX, epochs=10, batch_size=32, validation_split=0.1, verbose=1)
-model.save("LSTM_AE.h5")
-print("모델 저장 완료!")
+history = model.fit(
+    trainX,
+    trainX,
+    epochs=30,
+    batch_size=32,
+    validation_split=0.1,
+    shuffle=False,
+    verbose=1
+)
 
-plt.figure(figsize=(10, 5))
-plt.plot(history.history['loss'], label='Training loss')
-plt.plot(history.history['val_loss'], label='Validation loss')
-plt.title("Training vs Validation Loss")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
+model.save("lstm_ae_mpu6050.h5")
+print("모델 저장 완료")
+
+plt.figure(figsize=(10, 4))
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
 plt.legend()
 plt.grid()
 plt.show()
-
-
