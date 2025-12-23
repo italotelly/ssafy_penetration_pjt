@@ -274,7 +274,7 @@ function initErrChart() {
       labels: [],
       datasets: [
         // 0) mae 라인
-        { label: "mae", data: [], tension: 0.2, pointRadius: 0 },
+        { label: "mae", data: [], tension: 0.2, pointRadius: 0, borderColor: "#000" },
 
         // 1) threshold 가로선 (항상 빨간 라인)
         {
@@ -304,7 +304,11 @@ function initErrChart() {
       plugins: { legend: { display: true } },
       scales: {
         x: { display: true, ticks: { maxTicksLimit: 6 } },
-        y: { display: true },
+        y: { 
+          display: true,
+          min: 0,
+          max: 2,
+        },
       },
     },
   });

@@ -3,8 +3,10 @@ from vision.vision import RealSenseColorDetector
 
 def main():
     # ROI는 네가 쓰던 값 그대로
+    # y : 160
+    # x : 50
     vision = RealSenseColorDetector(
-        roi_area=(80, 240, 270, 320)
+        roi_area=(0, 190, 135, 185)
     )
 
     print("[INFO] Press 'q' to quit")

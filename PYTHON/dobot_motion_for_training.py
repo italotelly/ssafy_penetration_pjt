@@ -26,16 +26,7 @@ print("[INFO] Dobot connected")
 robot.w_home()
 print("[INFO] Homing completed")
 
-start_time = time.time()
-
-# ===============================
-# MAIN LOOP
-# ===============================
 while True:
-    elapsed = time.time() - start_time
-    if elapsed >= RUN_TIME_SEC:
-        break
-
     # Home
     robot.moveJ(*HOME_POS)
     while not robot.is_reached(HOME_POS):
@@ -83,6 +74,3 @@ while True:
     robot.moveL(*PLACE_WAY)
     while not robot.is_reached(PLACE_WAY):
         time.sleep(LOOP_DELAY)
-
-print("[INFO] Training motion finished")
-robot.w_home()
