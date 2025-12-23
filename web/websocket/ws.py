@@ -10,7 +10,7 @@ import joblib
 from keras.models import load_model
 from websocket_server import WebsocketServer
 
-SERIAL_PORT = "COM9"
+SERIAL_PORT = "COM8"
 BAUDRATE = 115200
 
 WS_PORT = 3001
@@ -140,18 +140,18 @@ def ws_thread(server):
     global seq
     
     while True:
-        time.sleep(0.01)
+        time.sleep(0.033)
         
         payload = {
             "type": "tick",
             "seq": seq,
             "connected": connected,
-            "sensor": None,
+            "mpu": None,
             "ai": None,
         }
         
         with lock:
-            payload["sensor"] = latest_sensor
+            payload["mpu"] = latest_sensor
 
         if not ai_event_queue.empty():
             payload["ai"] = ai_event_queue.get()

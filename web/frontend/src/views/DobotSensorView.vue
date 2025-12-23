@@ -81,6 +81,14 @@
         <div class="chart-wrap">
           <canvas ref="chartEl"></canvas>
         </div>
+        <div class="empty-space"></div>
+        <div class="db-card-header">
+          <span>Reconstruction Error</span>
+          <span class="text-muted">최근 {{ windowSec }}초</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas ref="errChartEl"></canvas>
+        </div>
       </div>
     </div>
   </section>
@@ -146,7 +154,7 @@ function connectWS() {
     }
 
     // server에서 payload 형식: {type:"tick", seq, connected, mpu, ai}
-    if (msg.type === "tick" || msg.type === "snapshot") {
+    if (msg.type === "tick") {
       connected.value = !!msg.connected;
       seq.value = msg.seq ?? seq.value;
 
@@ -159,26 +167,21 @@ function connectWS() {
       mpu.gy = numOrNull(src.GyY);
       mpu.gz = numOrNull(src.GyZ);
 
-      // AI 결과
-      if (msg.ai !== undefined && msg.ai !== null) {
-        const s = String(msg.ai).toLowerCase();
+      pushChartPoint({ ax: mpu.ax, ay: mpu.ay, az: mpu.az, gx: mpu.gx, gy: mpu.gy, gz: mpu.gz });
 
-        if (s === "normal") {
-          aiStatus.value = true;
-        } else {
-          aiStatus.value = false;
-        }
+      // AI 결과
+      // AI 결과 + error 차트
+      if (msg.ai && typeof msg.ai === "object") {
+        aiStatus.value = !msg.ai.anomaly;
+        const mae = numOrNull(msg.ai.mae);
+        pushErrChartPoint(mae, !!msg.ai.over_threshold);
       }
+
 
       // 마지막 수신 시각
       lastRxTs.value = Date.now();
       lastRxText.value = new Date(lastRxTs.value).toLocaleTimeString();
-
-      // 차트 업데이트
-      pushChartPoint({
-        ax: mpu.ax, ay: mpu.ay, az: mpu.az,
-        gx: mpu.gx, gy: mpu.gy, gz: mpu.gz,
-      });
+;
     }
   };
 
@@ -219,7 +222,12 @@ function fmt(v) {
 const chartEl = ref(null);
 let chart = null;
 
-const sendHz = 20;
+const errChartEl = ref(null);
+let errChart = null;
+
+const ERR_THRESHOLD = 1.1834726537353302;
+
+const sendHz = 30;
 // 최근 10초만 보여주기
 const windowSec = 10;
 const maxPoints = sendHz * windowSec;
@@ -256,6 +264,77 @@ function initChart() {
   });
 }
 
+function initErrChart() {
+  const ctx = errChartEl.value?.getContext("2d");
+  if (!ctx) return;
+
+  errChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        // 0) mae 라인
+        { label: "mae", data: [], tension: 0.2, pointRadius: 0 },
+
+        // 1) threshold 가로선 (항상 빨간 라인)
+        {
+          label: "threshold",
+          data: [],
+          tension: 0,
+          pointRadius: 0,
+          borderWidth: 2,
+          borderColor: "red",
+        },
+
+        // 2) 초과 포인트만 찍는 데이터셋 (빨간 점)
+        {
+          label: "over",
+          data: [],
+          showLine: false,
+          pointRadius: 4,
+          borderColor: "red",
+          pointBackgroundColor: "red",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: true } },
+      scales: {
+        x: { display: true, ticks: { maxTicksLimit: 6 } },
+        y: { display: true },
+      },
+    },
+  });
+}
+
+function pushErrChartPoint(mae, over) {
+  if (!errChart) return;
+
+  const t = new Date().toLocaleTimeString();
+
+  errChart.data.labels.push(t);
+
+  // mae 라인
+  errChart.data.datasets[0].data.push(mae);
+
+  // threshold 라인(항상)
+  errChart.data.datasets[1].data.push(ERR_THRESHOLD);
+
+  // over 점(초과일 때만 찍기)
+  errChart.data.datasets[2].data.push(over ? mae : null);
+
+  // 버퍼 초과 처리
+  if (errChart.data.labels.length > maxPoints) {
+    errChart.data.labels.shift();
+    for (const ds of errChart.data.datasets) ds.data.shift();
+  }
+
+  errChart.update("none");
+}
+
 function pushChartPoint(v) {
   if (!chart) return;
 
@@ -286,6 +365,7 @@ onMounted(() => {
   timerId = setInterval(updateNow, 1000);
 
   initChart();
+  initErrChart();
   connectWS();
 
   // WS 수신이 끊겼는지 감지(옵션)
@@ -305,6 +385,7 @@ onBeforeUnmount(() => {
   if (retryTimer) clearTimeout(retryTimer);
   try { ws?.close(); } catch {}
   try { chart?.destroy(); } catch {}
+  try { errChart?.destroy(); } catch {}
 });
 </script>
 
@@ -335,7 +416,9 @@ onBeforeUnmount(() => {
   font-size: 0.9rem;
   font-weight: 600;
 }
-
+.empty-space{
+  margin-top: 15px;
+}
 .right-badges {
   display: flex;
   gap: 8px;
@@ -388,7 +471,7 @@ onBeforeUnmount(() => {
 }
 
 .chart-wrap {
-  height: 450px;
+  height: 250px;
   width: 100%;
 }
 .ai-status {
