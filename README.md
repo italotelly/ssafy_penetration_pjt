@@ -1,4 +1,4 @@
-# Intelligent Robotic Sorting System with Predictive Maintenance
+# Intelligent Robotic Sorting System with PdM
 ![OS](https://img.shields.io/badge/OS-Ubuntu%2022.04-E95420)
 ![OS](https://img.shields.io/badge/OS-Windows%2011-blue)
 
