@@ -142,3 +142,59 @@ flowchart TD
     S -->|Yes| W
     S -->|No| F
 ```
+
+<a name="hardware"></a>
+### Control & Computing
+**Control PC (Ubuntu 22.04 / Windows 11)**  
+- Executes the main state machine and overall system control  
+- Handles vision processing, robot control, WebSocket server, and PdM inference  
+
+---
+
+### Robot & Mobility
+**Dobot Magician**  
+- Performs pick-and-place operations on the conveyor  
+- Responsible for color-based object sorting  
+
+**TurtleBot (ROS2 + Nav2)**  
+- Executes missions when specific conditions are met (e.g., yellow object threshold)  
+- Performs autonomous navigation using SLAM and returns to the home position  
+
+---
+
+### Vision
+**Intel RealSense D435i (RGB-D Camera)**  
+- Captures color and depth information  
+- Performs color-based object detection using OpenCV  
+- Uses hand–eye calibration for coordinate transformation between camera and robot  
+
+---
+
+### Embedded Devices
+**Raspberry Pi**  
+- Dedicated embedded controller for the conveyor belt system  
+- Communicates with industrial devices via Modbus TCP  
+
+**STM32**  
+- Handles process control and state signaling  
+- Communicates with the control PC via UART  
+
+**ESP32**  
+- Collects sensor data from the MPU6050  
+- Transmits data to the control PC via serial communication  
+
+**MPU6050 (IMU Sensor)**  
+- Measures vibration data from the robot base  
+- Provides input data for predictive maintenance analysis  
+
+---
+
+### Communication
+**UART**  
+- State and control signal communication between STM32 and the control PC  
+
+**Modbus TCP**  
+- Controls the conveyor belt system via the Raspberry Pi  
+
+**WebSocket**  
+- Streams real-time system status and logs to the web dashboard  
