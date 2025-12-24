@@ -144,6 +144,8 @@ flowchart TD
 ```
 
 <a name="hardware"></a>
+## Hardware
+
 ### Control & Computing
 **Control PC (Ubuntu 22.04 / Windows 11)**  
 - Executes the main state machine and overall system control  
