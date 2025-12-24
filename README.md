@@ -57,3 +57,89 @@ Furthermore, vibration data collected from the robot base is analyzed using an *
     </td>
   </tr>
 </table>
+
+<a name="system-flow"></a>
+## System Flow
+```mermaid
+flowchart TD
+    %% =====================
+    %% System Initialization
+    %% =====================
+    A[System Power ON] --> B[Initialize System]
+
+    B --> B1[Modbus TCP Client]
+    B --> B2[Dobot Robot]
+    B --> B3[UART STM32]
+    B --> B4[RealSense D435i]
+    B --> B5[Hand–Eye Calibration]
+
+    B --> C[WAIT_START]
+
+    %% =====================
+    %% Normal Operation Flow
+    %% =====================
+    C -->|Start Signal (110)| D[START_PROCESS]
+    D --> E[Conveyor ON]
+
+    E --> F[Object Detection]
+    F -->|RGB-D + OpenCV| G{Detected Color?}
+
+    G -->|RED / GREEN / BLUE| H[Conveyor OFF]
+    H --> I[Send Color Code to STM32]
+    I --> J[WAIT_CLASSIFY]
+
+    J -->|Classify Ack (101)| K[Robot Pick & Place]
+    K --> L[COMPLETE_TASK]
+
+    L -->|Continue| F
+    L -->|Finish Signal (100)| M[FINISH_PROCESS]
+
+    M --> N[Robot Home]
+    N --> O[Export Logs]
+    O --> C
+
+    %% =====================
+    %% Yellow Object & TurtleBot
+    %% =====================
+    G -->|YELLOW| T[Increase Yellow Count]
+    T -->|Threshold Reached| U[TurtleBot Start]
+    U --> V[Monitor TurtleBot Status]
+    V -->|Returned| F
+
+    %% =====================
+    %% Emergency Handling
+    %% =====================
+    F -->|Emergency (111)| X[EMERGENCY STOP]
+    K -->|Emergency (111)| X
+
+    X --> Y[Robot Stop & Conveyor OFF]
+    Y -->|Emergency Release (000)| Z[Restore Previous State]
+    Z --> F
+
+    %% =====================
+    %% Web Dashboard Monitoring
+    %% =====================
+    F --> W[Web Dashboard]
+    K --> W
+    L --> W
+    X --> W
+
+    W -->|WebSocket| W1[Real-time Logs]
+    W -->|WebSocket| W2[Dobot Status]
+    W -->|WebSocket| W3[TurtleBot Status]
+
+    %% =====================
+    %% Predictive Maintenance
+    %% =====================
+    B2 --> P[Collect Vibration Data]
+    P --> Q[LSTM AutoEncoder]
+    Q -->|Reconstruction Error| R{Anomaly Detected?}
+    R -->|Yes| W
+    R -->|No| Continue[Normal Operation]
+
+    %% =====================
+    %% Styling
+    %% =====================
+    classDef emergency fill:#ffe6e6,stroke:#ff0000,stroke-width:2px;
+    class X,Y,Z emergency;
+```
