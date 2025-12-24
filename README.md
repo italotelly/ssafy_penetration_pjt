@@ -22,5 +22,5 @@
 ![Network](https://img.shields.io/badge/Network-WebSocket-purple)
 
 <p align="center">
-  <img src="./assets/system_overview.png" alt="System Overview" width="90%">
+  <img src="./assets/system_overview.png" alt="System Overview">
 </p>
