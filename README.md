@@ -33,3 +33,14 @@ In addition, a **web-based dashboard** provides **real-time visualization of sys
 
 Furthermore, vibration data collected from the robot base is analyzed using an **LSTM AutoEncoder** to detect early signs of abnormal behavior, enabling **data-driven preventive maintenance** in a smart factory environment.
 
+## Table of Contents
+- [Team & Development Period](#team--development-period)
+- [System Flow](#system-flow)
+- [Hardware](#hardware)
+- [Installation](#installation)
+- [Execution](#execution)
+- [Run](#run)
+
+
+<a name="team--development-period"></a>
+## Team & Development Period
