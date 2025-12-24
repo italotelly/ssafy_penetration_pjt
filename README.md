@@ -44,3 +44,16 @@ Furthermore, vibration data collected from the robot base is analyzed using an *
 
 <a name="team--development-period"></a>
 ## Team & Development Period
+- Development Period: 2025.11.10 – 2025.12.25
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="./assets/team1.jpg" width="300"><br>
+      <sub><b>SSAFY_14TH_권순재</b></sub>
+    </td>
+    <td align="center">
+      <img src="./assets/team2.jpg" width="300"><br>
+      <sub><b>SSAFY_14TH_류광철</b></sub>
+    </td>
+  </tr>
+</table>
